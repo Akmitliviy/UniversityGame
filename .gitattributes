@@ -1,1 +1,1 @@
-*.uasset !text !filter !merge !diff
+*.uasset filter=lfs diff=lfs merge=lfs -text
