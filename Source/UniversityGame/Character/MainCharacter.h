@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Components/InputComponent.h"
 #include "MainCharacter.generated.h"
@@ -27,6 +26,24 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
 	double Speed = 450;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
+	double MaxScopedSpeed = 270;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
+	double MaxCrouchSpeed = 200;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool CrouchButtonDown = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool JumpButtonDown = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool ScopeButtonDown = false;
+
+	UPROPERTY(BlueprintReadWrite)
+	bool CanMove = true;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
 	UInputAction* MovementAction;
@@ -36,10 +53,22 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
 	UInputAction* JumpAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
+	UInputAction* CrouchAction;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
+	UInputAction* ScopeAction;
 
 	void Move(const FInputActionValue& Value);
 
 	void Look(const FInputActionValue& Value);
+
+	void CustomCrouch(const FInputActionValue& Value);
+
+	void CustomJump(const FInputActionValue& Value);
+	
+	void Scope(const FInputActionValue& Value);
 
 public:	
 	// Called every frame

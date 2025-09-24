@@ -3,6 +3,9 @@
 
 #include "MainCharacter.h"
 
+#include "EnhancedInputSubsystems.h"
+#include "Kismet/KismetMathLibrary.h"
+
 // Sets default values
 AMainCharacter::AMainCharacter()
 {
@@ -15,18 +18,31 @@ AMainCharacter::AMainCharacter()
 void AMainCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	JumpButtonDown = false;
+	CrouchButtonDown = false;
+	ScopeButtonDown = false;
+	CanMove = true;
 }
 
 void AMainCharacter::Move(const FInputActionValue& Value)
 {
+	if (!CanMove) return;
+	
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	const FVector MovementMath = FVector(MovementVector.Y, MovementVector.X, 0.f);
 	const FRotator Rotation = Controller->GetControlRotation();
 	const FRotator YawRotation = FRotator(0, Rotation.Yaw, 0);
 
-	const FVector Vector = FRotationMatrix(YawRotation).TransformVector(MovementMath);
-	AddMovementInput(Vector * Speed * GetWorld()->GetDeltaSeconds());
+	const FVector Vector = UKismetMathLibrary::Normal(FRotationMatrix(YawRotation).TransformVector(MovementMath));
+	const double SpeedModifier = CrouchButtonDown
+		? UKismetMathLibrary::Clamp(Speed, 0, MaxCrouchSpeed)
+		: ScopeButtonDown
+			? UKismetMathLibrary::Clamp(Speed, 0, MaxScopedSpeed)
+			: Speed;
+	
+	AddMovementInput(Vector * SpeedModifier * GetWorld()->GetDeltaSeconds());
 }
 
 void AMainCharacter::Look(const FInputActionValue& Value)
@@ -35,6 +51,21 @@ void AMainCharacter::Look(const FInputActionValue& Value)
 
 	AddControllerPitchInput(LookAxisVector.Y);
 	AddControllerYawInput(LookAxisVector.X);
+}
+
+void AMainCharacter::CustomCrouch(const FInputActionValue& Value)
+{
+	CrouchButtonDown = Value.Get<bool>();
+}
+
+void AMainCharacter::CustomJump(const FInputActionValue& Value)
+{
+	JumpButtonDown = Value.Get<bool>();
+}
+
+void AMainCharacter::Scope(const FInputActionValue& Value)
+{
+	ScopeButtonDown = Value.Get<bool>();
 }
 
 // Called every frame
@@ -53,7 +84,9 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	{
 		Input->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AMainCharacter::Move);
 		Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMainCharacter::Look);
-		Input->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AMainCharacter::Jump);
+		Input->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AMainCharacter::CustomJump);
+		Input->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AMainCharacter::CustomCrouch);
+		Input->BindAction(ScopeAction, ETriggerEvent::Triggered, this, &AMainCharacter::Scope);
 	}
 
 }
