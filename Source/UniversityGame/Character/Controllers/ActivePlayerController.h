@@ -20,7 +20,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Input)
 	TSoftObjectPtr<UInputMappingContext> InputMapping;
 
-public:
+	UPROPERTY(EditDefaultsOnly, Category = UI)
+	TSubclassOf<UUserWidget> CrosshairClass;
 
+	UPROPERTY()
+	UUserWidget* CrosshairWidget;
+
+public:
 	virtual void SetupInputComponent() override;
+
+	virtual void BeginPlay() override;
+	
+	void ShowCrosshair();
+
+	void HideCrosshair() const;
+
+private:
+
+	void CreateCrosshair();	
 };

@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "EnhancedInputComponent.h"
-#include "Components/InputComponent.h"
+#include "Controllers/ActivePlayerController.h"
+#include "UniversityGame/Weapons/Bullet.h"
 #include "MainCharacter.generated.h"
 
+class ABaseWeapon;
+class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 
@@ -24,20 +27,23 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
-	double Speed = 450;
+	UPROPERTY()
+	AActivePlayerController* PlayerController;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
-	double MaxScopedSpeed = 270;
+	// CAMERA BEGIN
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Camera)
+	UCameraComponent* CameraComponent;
+	// CAMERA END
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
-	double MaxCrouchSpeed = 200;
+	// MOVEMENT BEGIN
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement)
+	double Speed = 45;
 
-	UPROPERTY(BlueprintReadWrite)
-	bool CrouchButtonDown = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement)
+	double MaxScopedSpeed = 27;
 
-	UPROPERTY(BlueprintReadWrite)
-	bool JumpButtonDown = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement)
+	double MaxCrouchSpeed = 20;
 
 	UPROPERTY(BlueprintReadWrite)
 	bool ScopeButtonDown = false;
@@ -45,6 +51,16 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 	bool CanMove = true;
 	
+	void Move(const FInputActionValue& Value);
+
+	void Look(const FInputActionValue& Value);
+
+	void CustomCrouch(const FInputActionValue& Value);
+	
+	void Scope(const FInputActionValue& Value);
+	// MOVEMENT END
+
+	// INPUT BEGIN
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
 	UInputAction* MovementAction;
 	
@@ -59,17 +75,33 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
 	UInputAction* ScopeAction;
-
-	void Move(const FInputActionValue& Value);
-
-	void Look(const FInputActionValue& Value);
-
-	void CustomCrouch(const FInputActionValue& Value);
-
-	void CustomJump(const FInputActionValue& Value);
 	
-	void Scope(const FInputActionValue& Value);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input)
+	UInputAction* FireAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
+	UInputAction* ReloadAction;
+	// INPUT END
+
+	// Shooting BEGIN
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Weapon)
+	TSubclassOf<ABaseWeapon>  WeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Weapon)
+	bool CanShoot = true;
+
+	UPROPERTY()
+	ABaseWeapon* Weapon;
+	
+	void Fire(const FInputActionValue& Value);
+
+	UFUNCTION()
+	void Reload(const FInputActionValue& Value);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnReload();
+	// Shooting END
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
