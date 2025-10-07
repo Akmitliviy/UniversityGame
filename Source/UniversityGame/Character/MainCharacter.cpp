@@ -123,24 +123,29 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 	const FVector MuzzleLocation = Weapon->GetMuzzleLocation();
 	const FVector MuzzleDirection = Weapon->GetWeaponDirection();
 	
+	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
+	RV_TraceParams.bTraceComplex = true;
+	RV_TraceParams.bReturnPhysicalMaterial = false;
+    
+	FHitResult RV_Hit;
+	FVector TargetLocation;
 	FVector LaunchDirection;
+	
 	if (ScopeButtonDown)
 	{
+		GetWorld()->LineTraceSingleByChannel(RV_Hit, MuzzleLocation, MuzzleLocation + MuzzleDirection * 10000.f, ECC_Visibility, RV_TraceParams);
+        
+		TargetLocation = RV_Hit.bBlockingHit ? RV_Hit.ImpactPoint : MuzzleLocation + MuzzleDirection * 10000.f;
 		LaunchDirection = UKismetMathLibrary::Normal(MuzzleDirection);
-		Weapon->Fire(CameraRotation, LaunchDirection);
-	}else
-	{
-		
-		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
-		RV_TraceParams.bTraceComplex = true;
-		RV_TraceParams.bReturnPhysicalMaterial = false;
-		
-		FHitResult RV_Hit;
-		GetWorld()->LineTraceSingleByChannel(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 10000.f, ECC_Visibility, RV_TraceParams);
-		
-		LaunchDirection = UKismetMathLibrary::Normal(RV_Hit.ImpactPoint - MuzzleLocation);
-		Weapon->Fire(CameraRotation, LaunchDirection);
 	}
+	else
+	{
+		GetWorld()->LineTraceSingleByChannel(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 10000.f, ECC_Visibility, RV_TraceParams);
+        
+		TargetLocation = RV_Hit.bBlockingHit ? RV_Hit.ImpactPoint : CameraLocation + CameraDirection * 10000.f;
+		LaunchDirection = UKismetMathLibrary::Normal(TargetLocation - MuzzleLocation);
+	}
+	Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection, TargetLocation);
 }
 
 void AMainCharacter::Reload(const FInputActionValue& Value)

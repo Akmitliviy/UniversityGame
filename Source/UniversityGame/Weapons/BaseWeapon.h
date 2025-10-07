@@ -56,7 +56,7 @@ public:
 
 	float GetFireRate() const;
 
-	void Fire(const FRotator& BulletInitialRotation, const FVector& BulletLaunchDirection);
+	void Fire(const FRotator& BulletInitialRotation, const FVector& BulletLaunchDirection, const FVector& TargetLocation);
 
 	bool CanFire() const;
 

@@ -34,12 +34,33 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category=Decal)
 	UMaterialInterface* DecalMaterial;
 	
+	// Configuration
+	UPROPERTY(EditDefaultsOnly, Category=Movement)
+	int Waves = 5;
+	UPROPERTY(EditDefaultsOnly, Category=Movement)
+	float WaveRadius = 10.f;
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void OnFired(const FVector& Direction) const;
+	void OnFired(const FVector& Direction, const FVector& TargetLocation);
 	
 	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+
+private:
 	
+	UPROPERTY(VisibleAnywhere)
+	UProjectileMovementComponent* ProjectileMovement;
+
+	// Trajectory parameters
+	FVector InitialDirection;
+	FVector TargetPoint;
+	FVector StartLocation;
+    
+	float TotalDistance;
+    
+	void UpdateTrajectory();
+	
+	FVector CalculateSpiralOffset(float Progress) const;
 };

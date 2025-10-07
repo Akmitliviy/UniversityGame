@@ -49,12 +49,11 @@ float ABaseWeapon::GetFireRate() const
 	return FireRate;
 }
 
-void ABaseWeapon::Fire(const FRotator& BulletInitialRotation, const FVector& BulletLaunchDirection)
+void ABaseWeapon::Fire(const FRotator& BulletInitialRotation, const FVector& BulletLaunchDirection, const FVector& TargetLocation)
 {
 	if (BulletClass == nullptr) return;
-
 	if (!CanFire()) return;
-	
+    
 	const FVector MuzzleLocation = GetMuzzleLocation();
 
 	FActorSpawnParameters SpawnParams;
@@ -63,11 +62,12 @@ void ABaseWeapon::Fire(const FRotator& BulletInitialRotation, const FVector& Bul
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	MagazineAmmoCount--;
+    
 	if (ABullet* Bullet = GetWorld()->SpawnActor<ABullet>(BulletClass, MuzzleLocation, BulletInitialRotation, SpawnParams); Bullet != nullptr)
 	{
-		Bullet->OnFired(BulletLaunchDirection);
+		Bullet->OnFired(BulletLaunchDirection, TargetLocation);
 	}
-	
+    
 	bCanFire = false;
 	GetWorld()->GetTimerManager().SetTimer(
 		FireRateTimerHandle,

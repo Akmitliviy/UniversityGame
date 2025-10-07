@@ -3,10 +3,9 @@
 
 #include "Bullet.h"
 
-#include "Components/DecalComponent.h"
 #include "Components/SphereComponent.h"
-#include "Engine/DecalActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
 ABullet::ABullet()
@@ -18,7 +17,6 @@ ABullet::ABullet()
 	{
 		SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 		SphereComponent->InitSphereRadius(2.f);
-		SphereComponent->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
 		RootComponent = SphereComponent;
 	}
 
@@ -46,16 +44,73 @@ void ABullet::BeginPlay()
 	
 }
 
-// Called every frame
-void ABullet::Tick(float DeltaTime)
+void ABullet::OnFired(const FVector& Direction, const FVector& TargetLocation)
 {
-	Super::Tick(DeltaTime);
-
+    InitialDirection = Direction;
+    TargetPoint = TargetLocation;
+    StartLocation = GetActorLocation();
+    
+    TotalDistance = FVector::Dist(StartLocation, TargetPoint);
+    
+    if (ProjectileMovement)
+    {
+        ProjectileMovement->Velocity = InitialDirection * ProjectileMovement->InitialSpeed;
+        ProjectileMovement->bIsHomingProjectile = false;
+    }
 }
 
-void ABullet::OnFired(const FVector& Direction) const
+void ABullet::Tick(const float DeltaTime)
 {
-	ProjectileMovementComponent->Velocity = Direction * ProjectileMovementComponent->InitialSpeed * GetWorld()->GetDeltaSeconds();
+    Super::Tick(DeltaTime);
+
+	UpdateTrajectory();
+}
+
+void ABullet::UpdateTrajectory()
+{
+	const FVector CurrentLocation = GetActorLocation();
+    const float CurrentDistance = FVector::Dist(StartLocation, StartLocation + UKismetMathLibrary::ProjectVectorOnToVector(CurrentLocation - StartLocation, TargetPoint - StartLocation));
+	
+    const float ProgressToTarget = FMath::Clamp(CurrentDistance / TotalDistance, 0.f, 1.f);
+
+	const FVector Offset = CalculateSpiralOffset(ProgressToTarget);
+	
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			INDEX_NONE,
+			1.f,
+			FColor::Yellow,
+			TEXT("Offset vector is: " + Offset.ToString()));
+	}
+	const FVector NewDirection = (GetActorForwardVector() + Offset).GetSafeNormal(); 
+	const FVector NewLocation = CurrentLocation + NewDirection;
+	SetActorLocation(NewLocation);
+	
+    if (ProjectileMovement)
+    {
+	    if (!NewDirection.IsNearlyZero())
+        {
+            ProjectileMovement->Velocity = NewDirection * ProjectileMovement->InitialSpeed;
+        }
+    }
+}
+
+FVector ABullet::CalculateSpiralOffset(const float Progress) const
+{
+	const float TakePercentage = 1.f / Waves;
+	const float LocalProgress = FMath::Clamp(FMath::Frac(Progress / TakePercentage), 0.f, 1.f);
+	const float AngleDegree = FMath::Lerp(0, 360, LocalProgress);
+	
+    const float Angle = AngleDegree * PI / 180.f;
+
+    const FVector Right = GetActorRightVector();
+    const FVector Up = FVector::CrossProduct(GetActorForwardVector(), Right).GetSafeNormal();
+
+    const float x = FMath::Cos(Angle) * 50.f;
+    const float y = FMath::Sin(Angle) * 50.f;
+    
+    return Right * x + Up * y;
 }
 
 void ABullet::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp,
@@ -63,7 +118,7 @@ void ABullet::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class 
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
-	const UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
+	UGameplayStatics::SpawnDecalAttached(
 		DecalMaterial,
 		FVector(2.f, 2.f, 2.f),
 		OtherComp,
@@ -74,13 +129,6 @@ void ABullet::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class 
 		10.f
 	);
 	
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Yellow, TEXT("Target hit: " + Other->GetName()));
-
-		if (Decal != nullptr)
-			GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Yellow, TEXT("Decal created: " + Decal->GetName()));
-	}
 	Destroy();
 }
 
