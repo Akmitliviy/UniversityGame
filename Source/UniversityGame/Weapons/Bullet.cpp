@@ -75,14 +75,6 @@ void ABullet::UpdateTrajectory()
 
 	const FVector Offset = CalculateSpiralOffset(ProgressToTarget);
 	
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			INDEX_NONE,
-			1.f,
-			FColor::Yellow,
-			TEXT("Offset vector is: " + Offset.ToString()));
-	}
 	const FVector NewDirection = (GetActorForwardVector() + Offset).GetSafeNormal(); 
 	const FVector NewLocation = CurrentLocation + NewDirection;
 	SetActorLocation(NewLocation);
