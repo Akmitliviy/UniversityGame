@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "BaseWeapon.generated.h"
 
+class UBoxComponent;
 class ABullet;
 
 UCLASS()
@@ -16,13 +17,17 @@ class UNIVERSITYGAME_API ABaseWeapon : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ABaseWeapon();
-
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Mesh")
+	USkeletalMeshComponent* SkeletalMeshComponent ;
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Mesh")
-	USkeletalMeshComponent* SkeletalMeshComponent ;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Properties")
+	bool bInfiniteAmmo = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Properties")
 	int GeneralAmmoCapacity = 120;
@@ -58,7 +63,9 @@ public:
 
 	void Fire(const FRotator& BulletInitialRotation, const FVector& BulletLaunchDirection);
 
-	bool CanFire() const;
+	bool ReadyToFire() const;
+	
+	bool IsMagEmpty() const;
 
 	void ResetFireCooldown();
 
@@ -67,4 +74,13 @@ public:
 	bool CanReload() const;
 
 	void Reload();
+
+	void SetInfiniteAmmo(bool IsInfinite);
+
+	bool GetInfiniteAmmo() const;
+
+	int GetGeneralAmmoCapacity() const;
+	int GetMagazineAmmoCapacity() const;
+	int GetUnequippedAmmoCount() const;
+	int GetMagazineAmmoCount() const;
 };

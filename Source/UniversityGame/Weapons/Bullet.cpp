@@ -5,8 +5,10 @@
 
 #include "Components/DecalComponent.h"
 #include "Components/SphereComponent.h"
+#include "Engine/DamageEvents.h"
 #include "Engine/DecalActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "UniversityGame/Character/MainCharacter.h"
 
 // Sets default values
 ABullet::ABullet()
@@ -58,29 +60,33 @@ void ABullet::OnFired(const FVector& Direction) const
 	ProjectileMovementComponent->Velocity = Direction * ProjectileMovementComponent->InitialSpeed * GetWorld()->GetDeltaSeconds();
 }
 
-void ABullet::NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp,
+void ABullet::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp,
 	bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
 	Super::NotifyHit(MyComp, Other, OtherComp, bSelfMoved, HitLocation, HitNormal, NormalImpulse, Hit);
 
-	const UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
-		DecalMaterial,
-		FVector(2.f, 2.f, 2.f),
-		OtherComp,
-		NAME_None,
-		HitLocation,
-		HitNormal.Rotation(),
-		EAttachLocation::KeepWorldPosition,
-		10.f
-	);
-	
-	if (GEngine)
+	if (OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
 	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Yellow, TEXT("Target hit: " + Other->GetName()));
-
-		if (Decal != nullptr)
-			GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Yellow, TEXT("Decal created: " + Decal->GetName()));
+		const UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
+			DecalMaterial,
+			FVector(2.f, 2.f, 2.f),
+			OtherComp,
+			NAME_None,
+			HitLocation,
+			HitNormal.Rotation(),
+			EAttachLocation::KeepWorldPosition,
+			10.f
+		);
+		UE_LOG(LogTemp, Warning, TEXT("Hit WorldStatic: %s"), *(Other->GetName()));
 	}
+	
+	if (Other->CanBeDamaged())
+	{
+		const FDamageEvent DamageEvent;
+		UE_LOG(LogTemp, Warning, TEXT("Applying Damage to : %s"), *(Other->GetName()));
+		Other->TakeDamage(Damage, DamageEvent, GetInstigatorController(), this);
+	}
+	
 	Destroy();
 }
 

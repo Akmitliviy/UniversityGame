@@ -102,11 +102,25 @@ protected:
 	void OnReload();
 	// Shooting END
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnBeingShot();
+
+	UPROPERTY(BlueprintReadWrite)
+	bool CanPlayShotAnim = true;
+
+private:
+	UPROPERTY(EditAnywhere, Category = Health)
+	float Health;
+	
+	UPROPERTY(EditAnywhere, Category = Health)
+	float MaxHealth = 100.f;
+	
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 };

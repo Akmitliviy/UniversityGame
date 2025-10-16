@@ -16,6 +16,7 @@ AMainCharacter::AMainCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	SetCanBeDamaged(true);
 	
 	// Camera
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
@@ -28,6 +29,8 @@ AMainCharacter::AMainCharacter()
 	{
 		ACharacter::GetMovementComponent()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	}
+
+	Health = MaxHealth;
 }
 
 // Called when the game starts or when spawned
@@ -46,12 +49,24 @@ void AMainCharacter::BeginPlay()
 	ScopeButtonDown = false;
 	CanMove = true;
 
-	Weapon = GetWorld()->SpawnActor<ABaseWeapon>(WeaponClass, FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f));
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	Weapon = GetWorld()->SpawnActor<ABaseWeapon>(WeaponClass, FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f), SpawnParams);
 	if(Weapon)
 	{
 		Weapon->SetActorEnableCollision(false);
 		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("hand_r_weapon_socket"));
+
+		PlayerController->UpdateMagCapacity(Weapon->GetMagazineAmmoCapacity());
+		PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
+		PlayerController->UpdateGeneralAmmoCapacity(Weapon->GetGeneralAmmoCapacity());
+		PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
 	}
+	
+	PlayerController->UpdateHealthPercentage(Health / MaxHealth);
 }
 
 void AMainCharacter::Move(const FInputActionValue& Value)
@@ -116,7 +131,7 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 	if (WeaponClass == nullptr) return;
 	if (!CanShoot) return;
 
-	const FRotator CameraRotation = GetBaseAimRotation();
+	//const FRotator CameraRotation = GetBaseAimRotation();
 	const FVector CameraLocation = CameraComponent->GetComponentLocation();
 	const FVector CameraDirection = CameraComponent->GetForwardVector();
 
@@ -127,7 +142,7 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 	if (ScopeButtonDown)
 	{
 		LaunchDirection = UKismetMathLibrary::Normal(MuzzleDirection);
-		Weapon->Fire(CameraRotation, LaunchDirection);
+		Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
 	}else
 	{
 		
@@ -139,8 +154,11 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 		GetWorld()->LineTraceSingleByChannel(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 10000.f, ECC_Visibility, RV_TraceParams);
 		
 		LaunchDirection = UKismetMathLibrary::Normal(RV_Hit.ImpactPoint - MuzzleLocation);
-		Weapon->Fire(CameraRotation, LaunchDirection);
+		Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
 	}
+
+	PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
+	PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
 }
 
 void AMainCharacter::Reload(const FInputActionValue& Value)
@@ -150,7 +168,11 @@ void AMainCharacter::Reload(const FInputActionValue& Value)
 		CanShoot = false;
 		Weapon->Reload();
 		OnReload();
+		
+		PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
+		PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
 	}
+
 }
 
 
@@ -177,5 +199,22 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		Input->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AMainCharacter::Reload);
 	}
 
+}
+
+float AMainCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	Health -= DamageAmount;
+	PlayerController->UpdateHealthPercentage(Health/MaxHealth);
+	
+	UE_LOG(LogTemp, Warning, TEXT("%s has %f amount of health left. Instigator controller: %s"), *GetName(), Health, *(EventInstigator->GetName()));
+
+	if (CanPlayShotAnim)
+	{
+		CanPlayShotAnim = false;
+		OnBeingShot();
+	}
+	
+	return DamageAmount;
 }
 

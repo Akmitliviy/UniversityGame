@@ -7,6 +7,8 @@
 #include "InputMappingContext.h"
 #include "ActivePlayerController.generated.h"
 
+class UPlayerAmmoWidget;
+class UPlayerHealthbarWidget;
 class UInputMappingContext;
 /**
  * 
@@ -26,6 +28,18 @@ protected:
 	UPROPERTY()
 	UUserWidget* CrosshairWidget;
 
+	UPROPERTY(EditDefaultsOnly, Category = UI)
+	TSubclassOf<UPlayerHealthbarWidget> PlayerHealthBarClass;
+
+	UPROPERTY()
+	UPlayerHealthbarWidget* PlayerHealthBarWidget;
+
+	UPROPERTY(EditDefaultsOnly, Category = UI)
+	TSubclassOf<UPlayerAmmoWidget> PlayerAmmoClass;
+
+	UPROPERTY()
+	UPlayerAmmoWidget* PlayerAmmoWidget;
+
 public:
 	virtual void SetupInputComponent() override;
 
@@ -35,7 +49,17 @@ public:
 
 	void HideCrosshair() const;
 
+	void UpdateHealthPercentage(float Percentage);
+
+	
+	void UpdateGeneralAmmoCapacity(float Count);
+	void UpdateUnequippedAmmoCount(float Count);
+	void UpdateMagCapacity(float Count);
+	void UpdateAmmoInMagCount(float Count);
+
 private:
 
+	void CreateHealthBar();
+	void CreateAmmoWidget();
 	void CreateCrosshair();	
 };
