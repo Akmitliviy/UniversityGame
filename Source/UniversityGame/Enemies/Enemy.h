@@ -7,6 +7,9 @@
 #include "GameFramework/Character.h"
 #include "Enemy.generated.h"
 
+class ATargetPoint;
+class UWidgetComponent;
+class UEnemyHealthBarWidget;
 struct FInputActionValue;
 class ABaseWeapon;
 
@@ -36,11 +39,8 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 	bool CanMove = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	FVector TargetPointStart;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
-	FVector TargetPointEnd;
+	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category=Movement)
+	TArray<ATargetPoint*> TargetPoints;
 	// MOVEMENT END
 
 	// Shooting BEGIN
@@ -62,6 +62,9 @@ protected:
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void OnReload();
+	
+	UFUNCTION(BlueprintCallable)
+	void OnReloadFinal();
 	// Shooting END
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
@@ -73,10 +76,18 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void OnBeingShot();
 
+	UFUNCTION(BlueprintCallable)
+	void OnBeingShotFinal();
+
 	// AI START
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category=AI)
 	UBehaviorTree* BehaviorTree;
 	// AI END
+
+	// HUD START
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=HUD)
+	UWidgetComponent* HealthBarWidgetComponent;
+	// HUD END
 	
 public:
 	
@@ -104,7 +115,5 @@ public:
 
 	UBehaviorTree* GetBehaviorTree() const;
 
-	FVector GetTargetPointStart() const;
-	
-	FVector GetTargetPointEnd() const;
+	TArray<ATargetPoint*>& GetTargetPoints();
 };

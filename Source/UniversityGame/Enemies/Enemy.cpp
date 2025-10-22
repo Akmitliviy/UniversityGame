@@ -3,18 +3,33 @@
 
 #include "Enemy.h"
 
+#include "EnemyHealthBarWidget.h"
 #include "AI/SoldierAIController.h"
+#include "Components/WidgetComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "UniversityGame/Weapons/BaseWeapon.h"
 
 // Sets default values
-AEnemy::AEnemy()
+AEnemy::AEnemy() :
+HealthBarWidgetComponent{CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidgetComponent"))}
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	SetCanBeDamaged(true);
-
+	
 	Health = MaxHealth;
+	
+	if (HealthBarWidgetComponent)
+	{
+		HealthBarWidgetComponent->SetupAttachment(RootComponent);
+		HealthBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+		HealthBarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
+		if (UEnemyHealthBarWidget* HealthBarWidget = Cast<UEnemyHealthBarWidget>(HealthBarWidgetComponent->GetWidget());
+			HealthBarWidget != nullptr)
+		{
+			HealthBarWidget->UpdateHealthPercentage(Health / MaxHealth);
+		}
+	}
 }
 
 // Called when the game starts or when spawned
@@ -43,7 +58,7 @@ void AEnemy::BeginPlay()
 void AEnemy::Fire()
 {
 	if (WeaponClass == nullptr) return;
-	if (!CanShoot) return;
+	if (!CanShoot || IsDying) return;
 
 	const FVector MuzzleDirection = Weapon->GetWeaponDirection();
 	
@@ -75,6 +90,15 @@ void AEnemy::Reload()
 	}
 }
 
+void AEnemy::OnReloadFinal()
+{
+	CanShoot = true;
+	if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
+	{
+		SoldierController->SetIsReloading(false);
+	}
+}
+
 void AEnemy::OnDeathFinal()
 {
 	FActorSpawnParameters SpawnParams;
@@ -85,6 +109,15 @@ void AEnemy::OnDeathFinal()
 	
 	Weapon->Destroy();
 	Destroy();
+}
+
+void AEnemy::OnBeingShotFinal()
+{
+	CanPlayShotAnim = true;
+	if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
+	{
+		SoldierController->SetIsHit(false);
+	}
 }
 
 // Called every frame
@@ -105,28 +138,40 @@ void AEnemy::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 float AEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser)
 {
-	if (Health > 0 || IsImmortal)
+	if (IsImmortal || IsDying) return 0;
+	
+	if (Health > 0)
 	{
 		Health -= DamageAmount;
+		if (UEnemyHealthBarWidget* HealthBarWidget = Cast<UEnemyHealthBarWidget>(HealthBarWidgetComponent->GetWidget());
+			HealthBarWidget != nullptr)
+		{
+			HealthBarWidget->UpdateHealthPercentage(Health / MaxHealth);
+		}
 		UE_LOG(LogTemp, Warning, TEXT("%s has %f amount of health left. Instigator controller: %s"), *GetName(), Health, *(EventInstigator->GetName()));
-
 		if (CanPlayShotAnim)
 		{
 			CanPlayShotAnim = false;
-			
 			if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
 			{
 				SoldierController->SetIsHit(true);
 			}
 			OnBeingShot();
 		}
-	}else if (!IsDying && !IsImmortal)
+	}
+
+	if (Health <= 0 && !IsDying)
 	{
 		IsDying = true;
+		if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
+		{
+			SoldierController->SetIsDying(true);
+		}
 		OnDeath();
 	}
-	
+
 	return DamageAmount;
+	
 }
 
 UBehaviorTree* AEnemy::GetBehaviorTree() const
@@ -134,13 +179,7 @@ UBehaviorTree* AEnemy::GetBehaviorTree() const
 	return BehaviorTree;
 }
 
-FVector AEnemy::GetTargetPointStart() const
+TArray<ATargetPoint*>& AEnemy::GetTargetPoints()
 {
-	return TargetPointStart;
+	return TargetPoints;
 }
-
-FVector AEnemy::GetTargetPointEnd() const
-{
-	return TargetPointEnd;
-}
-

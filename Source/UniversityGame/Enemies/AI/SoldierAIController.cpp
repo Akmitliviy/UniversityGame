@@ -5,6 +5,7 @@
 
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Engine/TargetPoint.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "UniversityGame/Character/MainCharacter.h"
@@ -42,13 +43,19 @@ void ASoldierAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if(const AEnemy* Enemy = Cast<AEnemy>(InPawn))
+	if(AEnemy* Enemy = Cast<AEnemy>(InPawn))
 	{
-		if(Enemy->GetBehaviorTree()->BlackboardAsset)
+		
+		if(Enemy->GetBehaviorTree()->BlackboardAsset != nullptr)
 		{
 			BlackboardComponent->InitializeBlackboard(*Enemy->GetBehaviorTree()->BlackboardAsset);
-			BlackboardComponent->SetValueAsVector(FName("TargetPointStart"), Enemy->GetTargetPointStart());
-			BlackboardComponent->SetValueAsVector(FName("TargetPointEnd"), Enemy->GetTargetPointEnd());
+			
+			TargetPoints = Enemy->GetTargetPoints();
+			if (TargetPoints.Num() > 0)
+			{
+				CurrentTargetPointIndex = 0;
+				BlackboardComponent->SetValueAsVector(FName("TargetPoint"), TargetPoints[CurrentTargetPointIndex]->GetActorLocation());
+			}
 			BehaviorTreeComponent->StartTree(*Enemy->GetBehaviorTree());
 		}
 	}
@@ -81,4 +88,15 @@ void ASoldierAIController::SetIsReloading(bool IsReloading)
 void ASoldierAIController::SetIsHit(bool IsHit)
 {
 	BlackboardComponent->SetValueAsBool(FName("IsHit"), IsHit);
+}
+
+void ASoldierAIController::SetIsDying(bool IsDying)
+{
+	BlackboardComponent->SetValueAsBool(FName("IsDying"), IsDying);
+}
+
+void ASoldierAIController::GoToNextTargetPoint()
+{
+	CurrentTargetPointIndex = TargetPoints.IsValidIndex(CurrentTargetPointIndex + 1) ? CurrentTargetPointIndex + 1 : 0;
+	BlackboardComponent->SetValueAsVector(FName("TargetPoint"), TargetPoints[CurrentTargetPointIndex]->GetActorLocation());
 }
