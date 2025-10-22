@@ -33,6 +33,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category=Decal)
 	UMaterialInterface* DecalMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category=Damage)
+	float Damage = 10.f;
 	
 public:	
 	// Called every frame
@@ -40,6 +43,7 @@ public:
 
 	void OnFired(const FVector& Direction) const;
 	
-	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other, class UPrimitiveComponent* OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
+	virtual void NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveComponent* OtherComp, bool bSelfMoved,
+		FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit) override;
 	
 };

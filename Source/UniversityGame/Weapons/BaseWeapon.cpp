@@ -4,6 +4,7 @@
 #include "BaseWeapon.h"
 
 #include "Bullet.h"
+#include "Components/BoxComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
 // Sets default values
@@ -11,9 +12,9 @@ ABaseWeapon::ABaseWeapon()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	
 	SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Skeletal Mesh"));
-	SkeletalMeshComponent->SetupAttachment(RootComponent);
+	RootComponent = SkeletalMeshComponent;
 }
 
 // Called when the game starts or when spawned
@@ -53,7 +54,7 @@ void ABaseWeapon::Fire(const FRotator& BulletInitialRotation, const FVector& Bul
 {
 	if (BulletClass == nullptr) return;
 
-	if (!CanFire()) return;
+	if (!ReadyToFire()) return;
 	
 	const FVector MuzzleLocation = GetMuzzleLocation();
 
@@ -77,9 +78,14 @@ void ABaseWeapon::Fire(const FRotator& BulletInitialRotation, const FVector& Bul
 		false);
 }
 
-bool ABaseWeapon::CanFire() const
+bool ABaseWeapon::ReadyToFire() const
 {
 	return bCanFire && MagazineAmmoCount > 0;
+}
+
+bool ABaseWeapon::IsMagEmpty() const
+{
+	return MagazineAmmoCount == 0;
 }
 
 void ABaseWeapon::ResetFireCooldown()
@@ -94,19 +100,55 @@ FVector ABaseWeapon::GetWeaponDirection() const
 
 bool ABaseWeapon::CanReload() const
 {
-	return UnequippedAmmoCount > 0 && MagazineAmmoCount < MagazineAmmoCapacity;
+	return (UnequippedAmmoCount > 0 && MagazineAmmoCount < MagazineAmmoCapacity ) || bInfiniteAmmo;
 }
 
 void ABaseWeapon::Reload()
 {
-	if (const int ToFill = MagazineAmmoCapacity - MagazineAmmoCount; UnequippedAmmoCount >= ToFill)
+	if (bInfiniteAmmo)
 	{
-		MagazineAmmoCount += ToFill;
-		UnequippedAmmoCount -= ToFill;
-	}
-	else
+		MagazineAmmoCount = MagazineAmmoCapacity;
+	}else
 	{
-		MagazineAmmoCount += UnequippedAmmoCount;
-		UnequippedAmmoCount = 0;
+		if (const int ToFill = MagazineAmmoCapacity - MagazineAmmoCount; UnequippedAmmoCount >= ToFill)
+		{
+			MagazineAmmoCount += ToFill;
+			UnequippedAmmoCount -= ToFill;
+		}
+		else
+		{
+			MagazineAmmoCount += UnequippedAmmoCount;
+			UnequippedAmmoCount = 0;
+		}
 	}
+}
+
+void ABaseWeapon::SetInfiniteAmmo(bool IsInfinite)
+{
+	bInfiniteAmmo = IsInfinite;
+}
+
+bool ABaseWeapon::GetInfiniteAmmo() const
+{
+	return bInfiniteAmmo;
+}
+
+int ABaseWeapon::GetGeneralAmmoCapacity() const
+{
+	return GeneralAmmoCapacity;
+}
+
+int ABaseWeapon::GetMagazineAmmoCapacity() const
+{
+	return MagazineAmmoCapacity;
+}
+
+int ABaseWeapon::GetUnequippedAmmoCount() const
+{
+	return UnequippedAmmoCount;
+}
+
+int ABaseWeapon::GetMagazineAmmoCount() const
+{
+	return MagazineAmmoCount;
 }
