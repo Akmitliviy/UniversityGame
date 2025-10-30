@@ -81,6 +81,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
 	UInputAction* ReloadAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Input)
+	UInputAction* PickAction;
 	// INPUT END
 
 	// Shooting BEGIN
@@ -101,12 +104,20 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnReload();
 	// Shooting END
-	
+
+	// Damage START
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnBeingShot();
 
 	UPROPERTY(BlueprintReadWrite)
 	bool CanPlayShotAnim = true;
+	// Damage END
+
+	void Pick(const FInputActionValue& Value);
+
+	void DropWeapon();
+
+	ABaseWeapon* AcquireWeapon(UClass* NewWeaponClass, const ABaseWeapon* NewWeapon = nullptr);
 
 private:
 	UPROPERTY(EditAnywhere, Category = Health)

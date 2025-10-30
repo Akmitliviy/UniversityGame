@@ -88,6 +88,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=HUD)
 	UWidgetComponent* HealthBarWidgetComponent;
 	// HUD END
+
+	void DropWeapon();
 	
 public:
 	

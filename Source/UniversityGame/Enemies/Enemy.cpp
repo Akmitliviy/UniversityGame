@@ -51,7 +51,7 @@ void AEnemy::BeginPlay()
 	{
 		Weapon->SetActorEnableCollision(false);
 		Weapon->SetInfiniteAmmo(true);
-		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("hand_r_weapon_socket"));
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("hand_r_venra_socket"));
 	}
 }
 
@@ -101,13 +101,7 @@ void AEnemy::OnReloadFinal()
 
 void AEnemy::OnDeathFinal()
 {
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	const FTransform WeaponTransform = Weapon->GetActorTransform();
-	
-	GetWorld()->SpawnActor(WeaponClass, &WeaponTransform, SpawnParams);
-	
-	Weapon->Destroy();
+	//DropWeapon();
 	Destroy();
 }
 
@@ -117,6 +111,24 @@ void AEnemy::OnBeingShotFinal()
 	if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
 	{
 		SoldierController->SetIsHit(false);
+	}
+}
+
+void AEnemy::DropWeapon()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	const FTransform WeaponTransform = Weapon->GetActorTransform();
+
+	if (ABaseWeapon* DroppedWeapon = Cast<ABaseWeapon>(GetWorld()->SpawnActor(WeaponClass, &WeaponTransform, SpawnParams));
+		DroppedWeapon != nullptr
+	)
+	{
+		DroppedWeapon->SkeletalMeshComponent->SetSimulatePhysics(true);
+		DroppedWeapon->CopyFrom(Weapon);
+	
+		Weapon->Destroy();
+		Weapon = nullptr;
 	}
 }
 
@@ -167,6 +179,7 @@ float AEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AC
 		{
 			SoldierController->SetIsDying(true);
 		}
+		DropWeapon();
 		OnDeath();
 	}
 

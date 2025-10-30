@@ -152,3 +152,21 @@ int ABaseWeapon::GetMagazineAmmoCount() const
 {
 	return MagazineAmmoCount;
 }
+
+void ABaseWeapon::CopyFrom(const ABaseWeapon* OtherWeapon)
+{
+	bInfiniteAmmo = OtherWeapon->bInfiniteAmmo;
+	bCanFire = true;
+	FireRate = OtherWeapon->FireRate;
+	GeneralAmmoCapacity = OtherWeapon->GeneralAmmoCapacity;
+	MagazineAmmoCapacity = OtherWeapon->MagazineAmmoCapacity;
+	UnequippedAmmoCount = OtherWeapon->UnequippedAmmoCount;
+	MagazineAmmoCount = OtherWeapon->MagazineAmmoCount;
+	BulletClass = OtherWeapon->BulletClass;
+	Socket = OtherWeapon->Socket;
+}
+
+FName ABaseWeapon::GetSocketName() const
+{
+	return Socket;
+}

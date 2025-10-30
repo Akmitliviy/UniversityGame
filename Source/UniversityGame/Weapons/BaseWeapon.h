@@ -42,10 +42,13 @@ protected:
 	int MagazineAmmoCount = 30;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Properties")
-	float FireRate = 0.16f;
+	float FireRate = 0.1f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectiles")
 	TSubclassOf<ABullet> BulletClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Properties")
+	FName Socket;
 	
 	bool bCanFire = true;
 
@@ -83,4 +86,8 @@ public:
 	int GetMagazineAmmoCapacity() const;
 	int GetUnequippedAmmoCount() const;
 	int GetMagazineAmmoCount() const;
+
+	void CopyFrom(const ABaseWeapon* OtherWeapon);
+
+	FName GetSocketName() const;
 };

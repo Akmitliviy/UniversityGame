@@ -4,6 +4,7 @@
 #include "MainCharacter.h"
 
 #include "EnhancedInputSubsystems.h"
+#include "KismetTraceUtils.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/InputComponent.h"
@@ -49,22 +50,7 @@ void AMainCharacter::BeginPlay()
 	ScopeButtonDown = false;
 	CanMove = true;
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = GetInstigator();
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	
-	Weapon = GetWorld()->SpawnActor<ABaseWeapon>(WeaponClass, FVector(0.f, 0.f, 0.f), FRotator(0.f, 0.f, 0.f), SpawnParams);
-	if(Weapon)
-	{
-		Weapon->SetActorEnableCollision(false);
-		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("hand_r_weapon_socket"));
-
-		PlayerController->UpdateMagCapacity(Weapon->GetMagazineAmmoCapacity());
-		PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
-		PlayerController->UpdateGeneralAmmoCapacity(Weapon->GetGeneralAmmoCapacity());
-		PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
-	}
+	AcquireWeapon(WeaponClass);
 	
 	PlayerController->UpdateHealthPercentage(Health / MaxHealth);
 }
@@ -175,6 +161,98 @@ void AMainCharacter::Reload(const FInputActionValue& Value)
 
 }
 
+void AMainCharacter::Pick(const FInputActionValue& Value)
+{
+	
+	const FVector CameraLocation = CameraComponent->GetComponentLocation();
+	const FVector CameraDirection = CameraComponent->GetForwardVector();
+	
+	FCollisionObjectQueryParams RV_ObjectQueryParams = FCollisionObjectQueryParams(
+		ECC_TO_BITFIELD(ECC_Vehicle)
+	);
+	
+	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
+	RV_TraceParams.bReturnPhysicalMaterial = false;
+	RV_TraceParams.bDebugQuery = true;
+
+	FCollisionShape RV_TraceShape;
+	RV_TraceShape.SetSphere(50.f);
+	
+	FHitResult RV_Hit;
+	GetWorld()->SweepSingleByObjectType(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 100.f, FQuat::Identity, RV_ObjectQueryParams, RV_TraceShape, RV_TraceParams);
+
+	FHitResult DebugHit;
+	FLinearColor DebugTraceColor = FLinearColor::Green;
+	FLinearColor DebugHitColor = FLinearColor::Red;
+	DrawDebugSphereTraceSingle(GetWorld(), CameraLocation, CameraLocation + CameraDirection * 100.f, 50.f, EDrawDebugTrace::ForOneFrame, true, DebugHit, DebugTraceColor, DebugHitColor, 3.f);
+
+	
+	AActor* HitActor = RV_Hit.GetActor();
+	if (ABaseWeapon* HitWeapon = Cast<ABaseWeapon>(HitActor); HitWeapon != nullptr)
+	{
+		if (Weapon != nullptr)
+		{
+			DropWeapon();
+		}
+		AcquireWeapon(HitWeapon->GetClass(), HitWeapon);
+		HitWeapon->Destroy();
+	}
+	
+}
+
+void AMainCharacter::DropWeapon()
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	const FTransform WeaponTransform = Weapon->GetActorTransform();
+
+	if (ABaseWeapon* DroppedWeapon = Cast<ABaseWeapon>(GetWorld()->SpawnActor(WeaponClass, &WeaponTransform, SpawnParams));
+		DroppedWeapon != nullptr
+	)
+	{
+		DroppedWeapon->SkeletalMeshComponent->SetSimulatePhysics(true);
+		DroppedWeapon->CopyFrom(Weapon);
+	
+		Weapon->Destroy();
+		Weapon = nullptr;
+	}
+}
+
+ABaseWeapon* AMainCharacter::AcquireWeapon(UClass* NewWeaponClass, const ABaseWeapon* NewWeapon)
+{
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = GetInstigator();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	if(Weapon = GetWorld()->SpawnActor<ABaseWeapon>(
+			NewWeaponClass,
+			FVector(0.f, 0.f, 0.f),
+			FRotator(0.f, 0.f, 0.f),
+			SpawnParams
+		);
+		Weapon!= nullptr
+	)
+	{
+		Weapon->SetActorEnableCollision(false);
+		Weapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), Weapon->GetSocketName());
+
+		if (NewWeapon != nullptr)
+		{
+			Weapon->CopyFrom(NewWeapon);
+		}
+		Weapon->SetInfiniteAmmo(false);
+		WeaponClass = NewWeaponClass;
+		
+		PlayerController->UpdateMagCapacity(Weapon->GetMagazineAmmoCapacity());
+		PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
+		PlayerController->UpdateGeneralAmmoCapacity(Weapon->GetGeneralAmmoCapacity());
+		PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
+
+		return Weapon;
+	}
+	return nullptr;
+}
 
 // Called every frame
 void AMainCharacter::Tick(float DeltaTime)
@@ -197,12 +275,13 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		Input->BindAction(ScopeAction, ETriggerEvent::Triggered, this, &AMainCharacter::Scope);
 		Input->BindAction(FireAction, ETriggerEvent::Triggered, this, &AMainCharacter::Fire);
 		Input->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AMainCharacter::Reload);
+		Input->BindAction(PickAction, ETriggerEvent::Triggered, this, &AMainCharacter::Pick);
 	}
 
 }
 
 float AMainCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser)
+                                 AActor* DamageCauser)
 {
 	Health -= DamageAmount;
 	PlayerController->UpdateHealthPercentage(Health/MaxHealth);
