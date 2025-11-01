@@ -61,6 +61,8 @@ public:
 	TSubclassOf<ABullet> GetBulletClass() const;
 
 	FVector GetMuzzleLocation() const;
+	
+	FVector GetSightLocation() const;
 
 	float GetFireRate() const;
 
@@ -88,6 +90,8 @@ public:
 	int GetMagazineAmmoCount() const;
 
 	void CopyFrom(const ABaseWeapon* OtherWeapon);
+
+	void AddAmmo(int AmmoCount);
 
 	FName GetSocketName() const;
 };

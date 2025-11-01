@@ -38,9 +38,18 @@ TSubclassOf<ABullet> ABaseWeapon::GetBulletClass() const
 
 FVector ABaseWeapon::GetMuzzleLocation() const
 {
-	if (SkeletalMeshComponent)
+	if (SkeletalMeshComponent != nullptr)
 	{
-		return SkeletalMeshComponent->GetSocketLocation(TEXT("b_gun_muzzleflashSocket"));
+		return SkeletalMeshComponent->GetSocketLocation(TEXT("b_gun_muzzle_flash_socket"));
+	}
+	return GetActorLocation();
+}
+
+FVector ABaseWeapon::GetSightLocation() const
+{
+	if (SkeletalMeshComponent != nullptr)
+	{
+		return SkeletalMeshComponent->GetSocketLocation(TEXT("b_gun_sight_socket"));
 	}
 	return GetActorLocation();
 }
@@ -164,6 +173,22 @@ void ABaseWeapon::CopyFrom(const ABaseWeapon* OtherWeapon)
 	MagazineAmmoCount = OtherWeapon->MagazineAmmoCount;
 	BulletClass = OtherWeapon->BulletClass;
 	Socket = OtherWeapon->Socket;
+}
+
+void ABaseWeapon::AddAmmo(const int AmmoCount)
+{
+	if (UnequippedAmmoCount < GeneralAmmoCapacity && AmmoCount > 0)
+	{
+		if (UnequippedAmmoCount + AmmoCount >= GeneralAmmoCapacity)
+		{
+			UnequippedAmmoCount = GeneralAmmoCapacity;
+		}
+		else
+		{
+			UnequippedAmmoCount += AmmoCount;
+		}
+		
+	}
 }
 
 FName ABaseWeapon::GetSocketName() const

@@ -119,19 +119,34 @@ protected:
 
 	ABaseWeapon* AcquireWeapon(UClass* NewWeaponClass, const ABaseWeapon* NewWeapon = nullptr);
 
+	void OnInvincibilityFinished();
+
 private:
 	UPROPERTY(EditAnywhere, Category = Health)
 	float Health;
 	
 	UPROPERTY(EditAnywhere, Category = Health)
 	float MaxHealth = 100.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = Health)
+	bool bIsInvincible = false;
 	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	float ChangeHealth(float NewHealth);
+	
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	
+	void Heal(float AdditionalHealth);
+
+	void GetAmmo(int AdditionalAmmo);
+
+	void MakeInvincibleFor(float Seconds);
+
+	void TeleportToLocation(FVector Location);
 };

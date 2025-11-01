@@ -51,8 +51,7 @@ void AMainCharacter::BeginPlay()
 	CanMove = true;
 
 	AcquireWeapon(WeaponClass);
-	
-	PlayerController->UpdateHealthPercentage(Health / MaxHealth);
+	ChangeHealth(MaxHealth);
 }
 
 void AMainCharacter::Move(const FInputActionValue& Value)
@@ -122,26 +121,38 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 	const FVector CameraDirection = CameraComponent->GetForwardVector();
 
 	const FVector MuzzleLocation = Weapon->GetMuzzleLocation();
-	const FVector MuzzleDirection = Weapon->GetWeaponDirection();
-	
-	FVector LaunchDirection;
+	const FVector SightLocation = Weapon->GetSightLocation();
+	float TraceDistance = 10000.f;
+
+	FVector TraceDirection;
+
 	if (ScopeButtonDown)
 	{
-		LaunchDirection = UKismetMathLibrary::Normal(MuzzleDirection);
-		Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
+		TraceDirection = SightLocation - CameraLocation;
 	}else
 	{
-		
-		FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
-		RV_TraceParams.bTraceComplex = true;
-		RV_TraceParams.bReturnPhysicalMaterial = false;
-		
-		FHitResult RV_Hit;
-		GetWorld()->LineTraceSingleByChannel(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 10000.f, ECC_Visibility, RV_TraceParams);
-		
-		LaunchDirection = UKismetMathLibrary::Normal(RV_Hit.ImpactPoint - MuzzleLocation);
-		Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
+		TraceDirection = CameraDirection;
 	}
+	TraceDirection.Normalize();
+	TraceDirection *= TraceDistance;
+	
+	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
+	RV_TraceParams.bTraceComplex = true;
+	RV_TraceParams.bReturnPhysicalMaterial = false;
+	
+	FHitResult RV_Hit;
+	
+	GetWorld()->LineTraceSingleByChannel(RV_Hit, CameraLocation, CameraLocation + TraceDirection, ECC_Visibility, RV_TraceParams);
+
+	FVector LaunchDirection;
+	if (RV_Hit.bBlockingHit)
+	{
+		LaunchDirection = UKismetMathLibrary::Normal(RV_Hit.ImpactPoint - MuzzleLocation);
+	}else
+	{
+		LaunchDirection = UKismetMathLibrary::Normal(CameraLocation + TraceDirection - MuzzleLocation);
+	}
+	Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
 
 	PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
 	PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
@@ -168,7 +179,7 @@ void AMainCharacter::Pick(const FInputActionValue& Value)
 	const FVector CameraDirection = CameraComponent->GetForwardVector();
 	
 	FCollisionObjectQueryParams RV_ObjectQueryParams = FCollisionObjectQueryParams(
-		ECC_TO_BITFIELD(ECC_Vehicle)
+		ECC_TO_BITFIELD(ECC_GameTraceChannel2)
 	);
 	
 	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
@@ -283,8 +294,10 @@ void AMainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 float AMainCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
                                  AActor* DamageCauser)
 {
-	Health -= DamageAmount;
-	PlayerController->UpdateHealthPercentage(Health/MaxHealth);
+	if (!bIsInvincible)
+	{
+		ChangeHealth(Health - DamageAmount);
+	}
 	
 	UE_LOG(LogTemp, Warning, TEXT("%s has %f amount of health left. Instigator controller: %s"), *GetName(), Health, *(EventInstigator->GetName()));
 
@@ -295,5 +308,52 @@ float AMainCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	}
 	
 	return DamageAmount;
+}
+
+float AMainCharacter::ChangeHealth(const float NewHealth)
+{
+	Health = FMath::Clamp(NewHealth, 0, MaxHealth);
+	
+	PlayerController->UpdateHealthPercentage(Health/MaxHealth);
+	return Health;
+}
+
+void AMainCharacter::GetAmmo(const int AdditionalAmmo)
+{
+	Weapon->AddAmmo(AdditionalAmmo);
+	
+	PlayerController->UpdateAmmoInMagCount(Weapon->GetMagazineAmmoCount());
+	PlayerController->UpdateUnequippedAmmoCount(Weapon->GetUnequippedAmmoCount());
+}
+
+void AMainCharacter::MakeInvincibleFor(float Seconds)
+{
+	
+	FTimerHandle InvincibilityTimerHandle;
+	bIsInvincible = true;
+	GetWorld()->GetTimerManager().SetTimer(
+		InvincibilityTimerHandle,
+		this,
+		&AMainCharacter::OnInvincibilityFinished,
+		Seconds,
+		false);
+}
+
+void AMainCharacter::OnInvincibilityFinished()
+{
+	bIsInvincible = false;
+}
+
+void AMainCharacter::Heal(const float AdditionalHealth)
+{
+	if (Health < MaxHealth && AdditionalHealth > 0)
+	{
+		ChangeHealth(Health + AdditionalHealth);
+	}
+}
+
+void AMainCharacter::TeleportToLocation(FVector Location)
+{
+	SetActorLocation(Location);
 }
 
