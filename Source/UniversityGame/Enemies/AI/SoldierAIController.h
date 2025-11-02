@@ -7,6 +7,7 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "SoldierAIController.generated.h"
 
+class AEnemy;
 class ATargetPoint;
 struct FActorPerceptionUpdateInfo;
 class UAISenseConfig_Sight;
@@ -20,12 +21,14 @@ class UNIVERSITYGAME_API ASoldierAIController : public AAIController
 
 	FGenericTeamId TeamId;
 
-private:
 	UPROPERTY()
 	TArray<ATargetPoint*> TargetPoints = TArray<ATargetPoint*>();
 
 	UPROPERTY()
 	int CurrentTargetPointIndex;
+
+	UPROPERTY()
+	AEnemy* ControlledEnemy;
 	
 protected:
 
@@ -55,15 +58,17 @@ public:
 
 	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
 
-	UFUNCTION()
 	void SetIsReloading(bool IsReloading);
 
-	UFUNCTION()
 	void SetIsHit(bool IsHit);
 
-	UFUNCTION()
 	void SetIsDying(bool IsDying);
 
-	UFUNCTION()
 	void GoToNextTargetPoint();
+
+	void StartShooting();
+
+	void SetScoped(const bool IsScoped);
+
+	bool RotateTowards(FName Target);
 };

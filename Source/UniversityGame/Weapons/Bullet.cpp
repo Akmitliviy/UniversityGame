@@ -86,6 +86,12 @@ void ABullet::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitiveCo
 		UE_LOG(LogTemp, Warning, TEXT("Applying Damage to : %s"), *(Other->GetName()));
 		Other->TakeDamage(Damage, DamageEvent, GetInstigatorController(), this);
 	}
+
+	if (OtherComp->GetCollisionObjectType() == ECC_GameTraceChannel1)
+	{
+		const FVector ImpulseStrength = ProjectileMovementComponent->Velocity;
+		OtherComp->AddForceAtLocation(ImpulseStrength, HitLocation);
+	}
 	
 	Destroy();
 }

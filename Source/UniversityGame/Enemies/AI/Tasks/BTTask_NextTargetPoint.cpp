@@ -5,6 +5,11 @@
 
 #include "UniversityGame/Enemies/AI/SoldierAIController.h"
 
+UBTTask_NextTargetPoint::UBTTask_NextTargetPoint()
+{
+	NodeName = "Next Target Point";
+}
+
 EBTNodeResult::Type UBTTask_NextTargetPoint::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	if (ASoldierAIController* SoldierAIController = Cast<ASoldierAIController>(OwnerComp.GetOwner()); SoldierAIController != nullptr)

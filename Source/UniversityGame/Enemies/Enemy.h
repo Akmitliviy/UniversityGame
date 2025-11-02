@@ -37,7 +37,7 @@ protected:
 	double MaxCrouchSpeed = 20;
 
 	UPROPERTY(BlueprintReadWrite)
-	bool CanMove = true;
+	bool bCanMove = true;
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category=Movement)
 	TArray<ATargetPoint*> TargetPoints;
@@ -48,17 +48,13 @@ protected:
 	TSubclassOf<ABaseWeapon>  WeaponClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Weapon)
-	bool CanShoot = true;
+	bool bCanShoot = true;
 
 	UPROPERTY()
 	ABaseWeapon* Weapon;
 	
-	void Fire();
-
-	void Reload();
-	
 	UPROPERTY(BlueprintReadWrite)
-	bool IsScoped = false;
+	bool bIsScoped = false;
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void OnReload();
@@ -100,22 +96,32 @@ public:
 	float MaxHealth = 100;
 
 	UPROPERTY(BlueprintReadWrite, Category=Health)
-	bool IsDying = false;
+	bool bIsDying = false;
 
 	UPROPERTY(BlueprintReadWrite, Category=Reactions)
-	bool CanPlayShotAnim = true;
+	bool bCanPlayShotAnim = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Editor)
-	bool IsImmortal = false;
+	bool bIsImmortal = false;
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
+	void Fire();
+
+	void Reload();
+
+	void SetIsScoped(const bool IsScoped);
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	UBehaviorTree* GetBehaviorTree() const;
 
 	TArray<ATargetPoint*>& GetTargetPoints();
+
+	FVector GetWeaponForward() const;
+
+	void InstigateEvasionSystem();
 };

@@ -10,6 +10,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/PawnMovementComponent.h"
 #include "ProfilingDebugging/CookStats.h"
+#include "UniversityGame/Enemies/Enemy.h"
 #include "UniversityGame/Weapons/BaseWeapon.h"
 
 // Sets default values
@@ -47,8 +48,8 @@ void AMainCharacter::BeginPlay()
 		}
 	}
 
-	ScopeButtonDown = false;
-	CanMove = true;
+	bScopeButtonDown = false;
+	bCanMove = true;
 
 	AcquireWeapon(WeaponClass);
 	ChangeHealth(MaxHealth);
@@ -56,7 +57,7 @@ void AMainCharacter::BeginPlay()
 
 void AMainCharacter::Move(const FInputActionValue& Value)
 {
-	if (!CanMove) return;
+	if (!bCanMove) return;
 
 	const UPawnMovementComponent* MovementComponent = GetMovementComponent();
 	if (MovementComponent == nullptr) return;
@@ -70,7 +71,7 @@ void AMainCharacter::Move(const FInputActionValue& Value)
 	const FVector Vector = UKismetMathLibrary::Normal(FRotationMatrix(YawRotation).TransformVector(MovementMath));
 	const double SpeedModifier = MovementComponent->IsCrouching()
 		? UKismetMathLibrary::Clamp(Speed, 0, MaxCrouchSpeed)
-		: ScopeButtonDown
+		: bScopeButtonDown
 			? UKismetMathLibrary::Clamp(Speed, 0, MaxScopedSpeed)
 			: Speed;
 	
@@ -98,10 +99,10 @@ void AMainCharacter::CustomCrouch(const FInputActionValue& Value)
 
 void AMainCharacter::Scope(const FInputActionValue& Value)
 {
-	if (const bool NewValue = Value.Get<bool>(); ScopeButtonDown != NewValue)
+	if (const bool NewValue = Value.Get<bool>(); bScopeButtonDown != NewValue)
 	{
-		ScopeButtonDown = NewValue;
-		if (ScopeButtonDown)
+		bScopeButtonDown = NewValue;
+		if (bScopeButtonDown)
 		{
 			PlayerController->HideCrosshair();
 		}else
@@ -114,7 +115,7 @@ void AMainCharacter::Scope(const FInputActionValue& Value)
 void AMainCharacter::Fire(const FInputActionValue& Value)
 {
 	if (WeaponClass == nullptr) return;
-	if (!CanShoot) return;
+	if (!bCanShoot) return;
 
 	//const FRotator CameraRotation = GetBaseAimRotation();
 	const FVector CameraLocation = CameraComponent->GetComponentLocation();
@@ -122,11 +123,11 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 
 	const FVector MuzzleLocation = Weapon->GetMuzzleLocation();
 	const FVector SightLocation = Weapon->GetSightLocation();
-	float TraceDistance = 10000.f;
+	constexpr float TraceDistance = 10000.f;
 
 	FVector TraceDirection;
 
-	if (ScopeButtonDown)
+	if (bScopeButtonDown)
 	{
 		TraceDirection = SightLocation - CameraLocation;
 	}else
@@ -147,6 +148,10 @@ void AMainCharacter::Fire(const FInputActionValue& Value)
 	FVector LaunchDirection;
 	if (RV_Hit.bBlockingHit)
 	{
+		if (AEnemy* Enemy = Cast<AEnemy>(RV_Hit.GetActor()); Enemy != nullptr)
+		{
+			Enemy->InstigateEvasionSystem();
+		}
 		LaunchDirection = UKismetMathLibrary::Normal(RV_Hit.ImpactPoint - MuzzleLocation);
 	}else
 	{
@@ -162,7 +167,7 @@ void AMainCharacter::Reload(const FInputActionValue& Value)
 {
 	if (Weapon->CanReload())
 	{
-		CanShoot = false;
+		bCanShoot = false;
 		Weapon->Reload();
 		OnReload();
 		
@@ -177,9 +182,9 @@ void AMainCharacter::Pick(const FInputActionValue& Value)
 	
 	const FVector CameraLocation = CameraComponent->GetComponentLocation();
 	const FVector CameraDirection = CameraComponent->GetForwardVector();
-	
-	FCollisionObjectQueryParams RV_ObjectQueryParams = FCollisionObjectQueryParams(
-		ECC_TO_BITFIELD(ECC_GameTraceChannel2)
+
+	const FCollisionObjectQueryParams RV_ObjectQueryParams = FCollisionObjectQueryParams(
+		ECC_TO_BITFIELD(ECC_GameTraceChannel2 | ECC_Destructible)
 	);
 	
 	FCollisionQueryParams RV_TraceParams = FCollisionQueryParams(FName(TEXT("RV_Trace")), true, this);
@@ -192,21 +197,28 @@ void AMainCharacter::Pick(const FInputActionValue& Value)
 	FHitResult RV_Hit;
 	GetWorld()->SweepSingleByObjectType(RV_Hit, CameraLocation, CameraLocation + CameraDirection * 100.f, FQuat::Identity, RV_ObjectQueryParams, RV_TraceShape, RV_TraceParams);
 
-	FHitResult DebugHit;
-	FLinearColor DebugTraceColor = FLinearColor::Green;
-	FLinearColor DebugHitColor = FLinearColor::Red;
+	const FHitResult DebugHit;
+	const FLinearColor DebugTraceColor = FLinearColor::Green;
+	const FLinearColor DebugHitColor = FLinearColor::Red;
 	DrawDebugSphereTraceSingle(GetWorld(), CameraLocation, CameraLocation + CameraDirection * 100.f, 50.f, EDrawDebugTrace::ForOneFrame, true, DebugHit, DebugTraceColor, DebugHitColor, 3.f);
 
-	
-	AActor* HitActor = RV_Hit.GetActor();
-	if (ABaseWeapon* HitWeapon = Cast<ABaseWeapon>(HitActor); HitWeapon != nullptr)
+	if (!RV_Hit.bBlockingHit) return;
+
+	if (RV_Hit.GetComponent()->GetCollisionObjectType() == ECC_GameTraceChannel2)
 	{
-		if (Weapon != nullptr)
+		AActor* HitActor = RV_Hit.GetActor();
+		if (ABaseWeapon* HitWeapon = Cast<ABaseWeapon>(HitActor); HitWeapon != nullptr)
 		{
-			DropWeapon();
+			if (Weapon != nullptr)
+			{
+				DropWeapon();
+			}
+			AcquireWeapon(HitWeapon->GetClass(), HitWeapon);
+			HitWeapon->Destroy();
 		}
-		AcquireWeapon(HitWeapon->GetClass(), HitWeapon);
-		HitWeapon->Destroy();
+	}else if (RV_Hit.GetComponent()->GetCollisionObjectType() == ECC_Destructible)
+	{
+		
 	}
 	
 }
@@ -301,9 +313,9 @@ float AMainCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	
 	UE_LOG(LogTemp, Warning, TEXT("%s has %f amount of health left. Instigator controller: %s"), *GetName(), Health, *(EventInstigator->GetName()));
 
-	if (CanPlayShotAnim)
+	if (bCanPlayShotAnim)
 	{
-		CanPlayShotAnim = false;
+		bCanPlayShotAnim = false;
 		OnBeingShot();
 	}
 	
@@ -352,7 +364,7 @@ void AMainCharacter::Heal(const float AdditionalHealth)
 	}
 }
 
-void AMainCharacter::TeleportToLocation(FVector Location)
+void AMainCharacter::TeleportToLocation(const FVector& Location)
 {
 	SetActorLocation(Location);
 }

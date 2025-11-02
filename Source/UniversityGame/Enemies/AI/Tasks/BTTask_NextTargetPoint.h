@@ -14,5 +14,7 @@ class UNIVERSITYGAME_API UBTTask_NextTargetPoint : public UBTTask_BlackboardBase
 {
 	GENERATED_BODY()
 
+	UBTTask_NextTargetPoint();
+
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 };

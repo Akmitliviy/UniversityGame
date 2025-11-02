@@ -46,10 +46,10 @@ protected:
 	double MaxCrouchSpeed = 20;
 
 	UPROPERTY(BlueprintReadWrite)
-	bool ScopeButtonDown = false;
+	bool bScopeButtonDown = false;
 
 	UPROPERTY(BlueprintReadWrite)
-	bool CanMove = true;
+	bool bCanMove = true;
 	
 	void Move(const FInputActionValue& Value);
 
@@ -91,7 +91,7 @@ protected:
 	TSubclassOf<ABaseWeapon>  WeaponClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Weapon)
-	bool CanShoot = true;
+	bool bCanShoot = true;
 
 	UPROPERTY()
 	ABaseWeapon* Weapon;
@@ -110,7 +110,7 @@ protected:
 	void OnBeingShot();
 
 	UPROPERTY(BlueprintReadWrite)
-	bool CanPlayShotAnim = true;
+	bool bCanPlayShotAnim = true;
 	// Damage END
 
 	void Pick(const FInputActionValue& Value);
@@ -148,5 +148,5 @@ public:
 
 	void MakeInvincibleFor(float Seconds);
 
-	void TeleportToLocation(FVector Location);
+	void TeleportToLocation(const FVector& Location);
 };

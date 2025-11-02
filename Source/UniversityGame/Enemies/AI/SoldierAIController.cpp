@@ -43,9 +43,9 @@ void ASoldierAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if(AEnemy* Enemy = Cast<AEnemy>(InPawn))
+	if(AEnemy* Enemy = Cast<AEnemy>(InPawn); Enemy != nullptr)
 	{
-		
+		ControlledEnemy = Enemy;
 		if(Enemy->GetBehaviorTree()->BlackboardAsset != nullptr)
 		{
 			BlackboardComponent->InitializeBlackboard(*Enemy->GetBehaviorTree()->BlackboardAsset);
@@ -63,11 +63,16 @@ void ASoldierAIController::OnPossess(APawn* InPawn)
 
 void ASoldierAIController::OnPerceptionUpdate(const FActorPerceptionUpdateInfo& UpdateInfo)
 {
-	// if(AMainCharacter* Player = Cast<AMainCharacter>(UpdateInfo.Target))
-	// {
-	// 	BlackboardComponent->SetValueAsBool(FName("HasTarget"), UpdateInfo.Stimulus.WasSuccessfullySensed());
-	// 	BlackboardComponent->SetValueAsObject(FName("MainCharacter"), Player);
-	// }
+	if(AMainCharacter* Player = Cast<AMainCharacter>(UpdateInfo.Target))
+	{
+		if(UpdateInfo.Stimulus.WasSuccessfullySensed())
+		{
+			BlackboardComponent->SetValueAsObject(FName("Player"), Player);
+		}else
+		{
+			BlackboardComponent->SetValueAsObject(FName("Player"), nullptr);
+		}
+	}
 }
 
 ETeamAttitude::Type ASoldierAIController::GetTeamAttitudeTowards(const AActor& Other) const
@@ -99,4 +104,36 @@ void ASoldierAIController::GoToNextTargetPoint()
 {
 	CurrentTargetPointIndex = TargetPoints.IsValidIndex(CurrentTargetPointIndex + 1) ? CurrentTargetPointIndex + 1 : 0;
 	BlackboardComponent->SetValueAsVector(FName("TargetPoint"), TargetPoints[CurrentTargetPointIndex]->GetActorLocation());
+}
+
+void ASoldierAIController::StartShooting()
+{
+	if (ControlledEnemy != nullptr)
+	{
+		
+		ControlledEnemy->Fire();
+	}
+}
+
+void ASoldierAIController::SetScoped(const bool IsScoped)
+{
+	if (ControlledEnemy != nullptr)
+	{
+		ControlledEnemy->SetIsScoped(IsScoped);
+	}
+}
+
+bool ASoldierAIController::RotateTowards(const FName Target)
+{
+	if (const AMainCharacter* Player = Cast<AMainCharacter>(BlackboardComponent->GetValueAsObject(Target));
+		Player != nullptr && ControlledEnemy != nullptr)
+	{
+		const FVector TargetLocation = Player->GetActorLocation();
+		const FVector EnemyLocation = ControlledEnemy->GetActorLocation();
+		const FRotator NewRotation = (TargetLocation - EnemyLocation).GetSafeNormal().Rotation();
+
+		ControlledEnemy->SetActorRelativeRotation(FRotator(0.f, NewRotation.Yaw - 4.f, 0.f));
+		return true;
+	}
+	return false;
 }
