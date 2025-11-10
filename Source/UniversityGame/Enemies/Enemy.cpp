@@ -62,7 +62,7 @@ void AEnemy::Fire()
 	if (!bCanShoot || bIsDying) return;
 
 	const FVector MuzzleDirection = Weapon->GetWeaponDirection();
-	const FVector LaunchDirection = UKismetMathLibrary::Normal(MuzzleDirection + FVector(0.f, 0.f, -0.02f));
+	const FVector LaunchDirection = UKismetMathLibrary::Normal(MuzzleDirection);
 	
 	if (Weapon->ReadyToFire())
 		Weapon->Fire(LaunchDirection.Rotation(), LaunchDirection);
@@ -213,5 +213,8 @@ FVector AEnemy::GetWeaponForward() const
 
 void AEnemy::InstigateEvasionSystem()
 {
-	
+	if(const auto SoldierController = Cast<ASoldierAIController>(GetController()); SoldierController != nullptr)
+	{
+		SoldierController->InstigateEvasionSystem();
+	}	
 }

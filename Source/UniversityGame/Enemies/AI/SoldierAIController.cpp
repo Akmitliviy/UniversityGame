@@ -6,6 +6,8 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/TargetPoint.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "UniversityGame/Character/MainCharacter.h"
@@ -136,4 +138,59 @@ bool ASoldierAIController::RotateTowards(const FName Target)
 		return true;
 	}
 	return false;
+}
+
+void ASoldierAIController::InstigateEvasionSystem()
+{
+	BlackboardComponent->SetValueAsBool(FName("IsEvading"), true);
+}
+
+FVector ASoldierAIController::CalculateEvasionLocation()
+{
+	if (ControlledEnemy == nullptr) return FVector::ZeroVector;
+
+	const FVector EnemyCurrentLocation = ControlledEnemy->GetActorLocation() - FVector(0.f, 0.f, 45.f);
+	const FVector EnemyRightVector = ControlledEnemy->GetActorRightVector();
+	const FVector TraceEndRight = EnemyCurrentLocation + EnemyRightVector * EvadingLocationDistance;
+	const FVector TraceEndLeft = EnemyCurrentLocation - EnemyRightVector * EvadingLocationDistance;
+
+	const TArray<AActor*> ActorsToIgnore;
+
+	FHitResult RV_Hit;
+	
+	UKismetSystemLibrary::LineTraceSingle(
+		ControlledEnemy,
+		EnemyCurrentLocation,
+		TraceEndRight,
+		UEngineTypes::ConvertToTraceType(ECC_WorldStatic),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		RV_Hit,
+		true
+	);
+
+	if (!RV_Hit.bBlockingHit)
+	{
+		return TraceEndRight;
+	}
+	
+	UKismetSystemLibrary::LineTraceSingle(
+		ControlledEnemy,
+		EnemyCurrentLocation,
+		TraceEndLeft,
+		UEngineTypes::ConvertToTraceType(ECC_WorldStatic),
+		false,
+		ActorsToIgnore,
+		EDrawDebugTrace::ForDuration,
+		RV_Hit,
+		true
+	);
+
+	if (!RV_Hit.bBlockingHit)
+	{
+		return TraceEndLeft;
+	}
+
+	return EnemyCurrentLocation;
 }

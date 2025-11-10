@@ -29,8 +29,10 @@ class UNIVERSITYGAME_API ASoldierAIController : public AAIController
 
 	UPROPERTY()
 	AEnemy* ControlledEnemy;
-	
+
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Actor)
+	float EvadingLocationDistance = 10.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	UBehaviorTreeComponent* BehaviorTreeComponent;
@@ -71,4 +73,8 @@ public:
 	void SetScoped(const bool IsScoped);
 
 	bool RotateTowards(FName Target);
+
+	void InstigateEvasionSystem();
+
+	FVector CalculateEvasionLocation();
 };
