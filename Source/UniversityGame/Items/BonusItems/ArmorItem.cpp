@@ -22,8 +22,8 @@ AArmorItem::AArmorItem()
 	}
 
 	// Mesh
-	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
-	StaticMeshComponent->SetupAttachment(SphereComponent);
+	SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMeshComponent->SetupAttachment(SphereComponent);
 
 	SphereComponent->BodyInstance.SetCollisionProfileName(TEXT("BonusItem"));
 

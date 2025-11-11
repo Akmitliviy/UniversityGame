@@ -15,7 +15,7 @@ class UNIVERSITYGAME_API AArmorItem : public AActor
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category=Mesh)
-	UStaticMeshComponent* StaticMeshComponent;
+	USkeletalMeshComponent* SkeletalMeshComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category=Collision)
 	USphereComponent* SphereComponent;
@@ -24,7 +24,7 @@ protected:
 	float InvincibilityDuration = 15.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Visual)
-	float ItemRotationSpeed = 10.f;
+	float ItemRotationSpeed = 1.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Visual)
 	float ItemMaxAscendingHeight = 1.f;
