@@ -218,3 +218,12 @@ void AEnemy::InstigateEvasionSystem()
 		SoldierController->InstigateEvasionSystem();
 	}	
 }
+
+void AEnemy::UpdateWalkSpeed(float NewSpeed)
+{
+	if (auto Movement = GetCharacterMovement(); Movement != nullptr)
+	{
+		Movement->MaxWalkSpeed = NewSpeed;
+		Movement->MaxWalkSpeedCrouched = NewSpeed;
+	}
+}

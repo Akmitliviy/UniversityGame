@@ -124,4 +124,7 @@ public:
 	FVector GetWeaponForward() const;
 
 	void InstigateEvasionSystem();
+
+	UFUNCTION(BlueprintCallable)
+	void UpdateWalkSpeed(float NewSpeed);
 };
